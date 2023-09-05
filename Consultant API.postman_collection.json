@@ -1,0 +1,452 @@
+{
+	"info": {
+		"_postman_id": "1c16540d-63d8-46ef-8992-3c98b538d5d7",
+		"name": "Consultant API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18487860"
+	},
+	"item": [
+		{
+			"name": "Generate authentication Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function(){",
+							"    pm.response.to.have.status(200);",
+							"    console.log(\"Successfully checked that status is 200\");",
+							"});",
+							"",
+							"pm.test(\"Response contains token\", function(){",
+							"    const responseJson = pm.response.json();",
+							"    pm.expect(responseJson).to.be.an(\"object\", \"There is no JSON in response!\");",
+							"    pm.expect(responseJson).to.have.property(\"token\");",
+							"    pm.expect(Object.keys(responseJson).length).to.equal(1, \"Other JSON properties found!\"); //The same can be achieved by using a Lodash function: _.size(responseJson)",
+							"    console.log(\"Successfully verified that the token is the only JSON property in response\");",
+							"})",
+							"",
+							"pm.test(\"Token is well-formatted\", function(){",
+							"    const responseJson = pm.response.json();",
+							"    pm.expect(responseJson.token).to.match(/^[\\w-]*\\.[\\w-]*\\.[\\w-]*$/);",
+							"    console.log(\"Succesfully verified that token is well-formatted\");",
+							"})",
+							"",
+							"if(pm.response.code === 200){",
+							"    pm.environment.set('token', pm.response.json().token);",
+							"}",
+							"postman.setNextRequest(\"Create a consultant\");"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"consultant\",\n    \"password\": \"password\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseurl}}/authenticate",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"authenticate"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create a consultant",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function(){",
+							"    pm.response.to.have.status(200);",
+							"    console.log(\"Successfully created a new consultant\");",
+							"});",
+							"",
+							"const schema = {",
+							"  \"type\": \"object\",",
+							"  \"properties\": {",
+							"    \"id\": {",
+							"      \"type\": \"integer\"",
+							"    },",
+							"    \"firstName\": {",
+							"      \"type\": \"string\"",
+							"    },",
+							"    \"lastName\": {",
+							"      \"type\": \"string\"",
+							"    },",
+							"    \"age\": {",
+							"      \"type\": \"integer\"",
+							"    },",
+							"    \"client\": {",
+							"      \"type\": \"string\"",
+							"    },",
+							"    \"assigned\": {",
+							"      \"type\": \"boolean\"",
+							"    }",
+							"  },",
+							"  \"required\": [",
+							"    \"id\",",
+							"    \"firstName\",",
+							"    \"lastName\",",
+							"    \"age\",",
+							"    \"client\",",
+							"    \"assigned\"",
+							"  ]",
+							"};",
+							"",
+							"pm.test('Response ConsultantSchema is valid', function() {",
+							"  pm.response.to.have.jsonSchema(schema);",
+							"});",
+							"",
+							"pm.environment.set(\"idOfCreatedConsultant\", pm.response.json().id);",
+							"",
+							"postman.setNextRequest(\"Retrieve full list of Consultants\");"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.environment.set(\"randomAge\", Math.floor(Math.random() * 5) + 18);",
+							"",
+							"var body = {",
+							"\tid: pm.variables.replaceIn('{{$randomInt}}'),",
+							"    firstName: pm.variables.replaceIn('{{$randomFirstName}}'),",
+							"\tlastName: pm.variables.replaceIn('{{$randomLastName}}'),",
+							"\tage: pm.variables.replaceIn('{{randomAge}}'),",
+							"\tclient: pm.variables.replaceIn('{{$randomCompanyName}}'),",
+							"\tassigned: pm.variables.replaceIn('{{$randomBoolean}}')",
+							"}",
+							"",
+							"var bodyJson = JSON.stringify(body);",
+							"pm.variables.set(\"requestBody\", bodyJson);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{{requestBody}}",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseurl}}/api/v1/consultants",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"consultants"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Retrieve full list of Consultants",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function(){",
+							"    pm.response.to.have.status(200);",
+							"    console.log(\"Successfully retrieved a full list of consultants\");",
+							"});",
+							"",
+							"let jsonData = pm.response.json();",
+							"",
+							"pm.test(\"Previously created consultant is on the list\", function() {",
+							"    let foundConsultant = _.find(jsonData, {id: pm.environment.get(\"idOfCreatedConsultant\")});",
+							"    pm.expect(foundConsultant, \"Surprisingly there is no previously created consultant in the list!\").to.exist;",
+							"});",
+							"",
+							"postman.setNextRequest(\"Retrieve a consultant\");"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseurl}}/api/v1/consultants",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"consultants"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Retrieve a consultant",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function(){",
+							"    pm.response.to.have.status(200);",
+							"    console.log(\"Successfully retrieved the newly created consultant\");",
+							"});",
+							"",
+							"const schema = {",
+							"  \"type\": \"object\",",
+							"  \"properties\": {",
+							"    \"id\": {",
+							"      \"type\": \"integer\"",
+							"    },",
+							"    \"firstName\": {",
+							"      \"type\": \"string\"",
+							"    },",
+							"    \"lastName\": {",
+							"      \"type\": \"string\"",
+							"    },",
+							"    \"age\": {",
+							"      \"type\": \"integer\"",
+							"    },",
+							"    \"client\": {",
+							"      \"type\": \"string\"",
+							"    },",
+							"    \"assigned\": {",
+							"      \"type\": \"boolean\"",
+							"    }",
+							"  },",
+							"  \"required\": [",
+							"    \"id\",",
+							"    \"firstName\",",
+							"    \"lastName\",",
+							"    \"age\",",
+							"    \"client\",",
+							"    \"assigned\"",
+							"  ]",
+							"};",
+							"",
+							"pm.test('Response ConsultantSchema is valid', function() {",
+							"  pm.response.to.have.jsonSchema(schema);",
+							"});",
+							"",
+							"postman.setNextRequest(\"Update a Consultant\");"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseurl}}/api/v1/consultants/{{idOfCreatedConsultant}}",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"consultants",
+						"{{idOfCreatedConsultant}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update a Consultant",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function(){",
+							"    pm.response.to.have.status(200);",
+							"    console.log(\"Successfully updated the newly created consultant\");",
+							"});",
+							"",
+							"pm.test(\"Consultant has been successfully updated\", function() {",
+							"    const responseJson = pm.response.json();",
+							"    pm.expect(responseJson.firstName).to.eql(\"Adamek\");",
+							"    pm.expect(responseJson.lastName).to.eql(\"Sajs\");",
+							"    pm.expect(responseJson.age).to.eql(20);",
+							"    pm.expect(responseJson.client).to.eql(\"Adam LLC\");",
+							"    pm.expect(responseJson.assigned).to.eql(true);",
+							"    console.log(\"Successfully verified the consultant update\");",
+							"})",
+							"",
+							"postman.setNextRequest(\"Delete a consultant\");"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"id\": {{idOfCreatedConsultant}},\r\n\t\"firstName\": \"Adamek\",\r\n    \"lastName\": \"Sajs\",\r\n    \"age\": 20,\r\n    \"client\": \"Adam LLC\",\r\n    \"assigned\": true\r\n}"
+				},
+				"url": {
+					"raw": "{{baseurl}}/api/v1/consultants/{{idOfCreatedConsultant}}",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"consultants",
+						"{{idOfCreatedConsultant}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete a consultant",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function(){",
+							"    pm.response.to.have.status(200);",
+							"    console.log(\"Successfully removed the newly created consultant\");",
+							"});",
+							"",
+							"var getListUrl = pm.environment.get(\"baseurl\") + \"/api/v1/consultants\";",
+							"var authentication = \"Bearer \" + pm.environment.get(\"token\");",
+							"",
+							"const getRequest = {",
+							"  url: pm.variables.replaceIn(getListUrl),",
+							"  method: \"GET\",",
+							"  header: {",
+							"    \"Content-Type\": \"application/json\",",
+							"    \"Authorization\": pm.variables.replaceIn(authentication)",
+							"  }",
+							"};",
+							"",
+							"console.log(\"===============\");",
+							"console.log(getRequest);",
+							"console.log(\"================\");",
+							"",
+							"pm.sendRequest(getRequest, (error, response) => {",
+							"  if (error) {",
+							"    console.log(error);",
+							"  }",
+							"",
+							"  pm.test(\"Consultant should be successfully deleted\", () => {",
+							"    pm.expect(error).to.equal(null);",
+							"    pm.expect(response).to.have.property('code', 200);",
+							"    let jsonData = response.json();",
+							"    let foundConsultant = _.find(jsonData, {id: pm.environment.get(\"idOfCreatedConsultant\")});",
+							"    pm.expect(foundConsultant, \"Surprisingly the previously created consultant is still in the list!\").to.not.exist;",
+							"  });",
+							"});",
+							"",
+							"postman.setNextRequest(null);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseurl}}/api/v1/consultants/{{idOfCreatedConsultant}}",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"consultants",
+						"{{idOfCreatedConsultant}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "token",
+			"value": "test",
+			"type": "string"
+		}
+	]
+}
